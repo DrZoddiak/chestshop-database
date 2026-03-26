@@ -10,7 +10,7 @@ import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.apache.ibatis.type.JdbcType;
 import org.jetbrains.annotations.NotNull;
 
-import javax.sql.DataSource;
+
 import java.util.UUID;
 
 public class MariaDatabase {
@@ -24,7 +24,10 @@ public class MariaDatabase {
     }
 
     public static SqlSessionFactory buildSessionFactory(@NotNull DatabaseSettings settings) {
-        DataSource dataSource = new PooledDataSource("org.mariadb.jdbc.Driver", "jdbc:" + settings.url(), settings.username(), settings.password());
+        PooledDataSource dataSource = new PooledDataSource("org.mariadb.jdbc.Driver", "jdbc:" + settings.url(), settings.username(), settings.password());
+        dataSource.setPoolPingEnabled(true);
+        dataSource.setPoolPingQuery("SELECT 1");
+        dataSource.setPoolPingConnectionsNotUsedFor(600_000);
         Environment environment = new Environment("production", new JdbcTransactionFactory(), dataSource);
         Configuration configuration = new Configuration(environment);
         configuration.getTypeHandlerRegistry().register(UUID.class, JdbcType.OTHER, UUIDAsBin16Handler.class);
