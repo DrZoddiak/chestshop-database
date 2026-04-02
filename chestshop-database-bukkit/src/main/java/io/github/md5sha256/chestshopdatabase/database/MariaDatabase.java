@@ -24,7 +24,9 @@ public class MariaDatabase {
     }
 
     public static SqlSessionFactory buildSessionFactory(@NotNull DatabaseSettings settings) {
-        PooledDataSource dataSource = new PooledDataSource("org.mariadb.jdbc.Driver", "jdbc:" + settings.url(), settings.username(), settings.password());
+        String url = "jdbc:" + settings.url();
+        url += url.contains("?") ? "&autoReconnect=true" : "?autoReconnect=true";
+        PooledDataSource dataSource = new PooledDataSource("org.mariadb.jdbc.Driver", url, settings.username(), settings.password());
         dataSource.setPoolPingEnabled(true);
         dataSource.setPoolPingQuery("SELECT 1");
         dataSource.setPoolPingConnectionsNotUsedFor(600_000);
