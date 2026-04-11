@@ -107,7 +107,8 @@ public interface MariaChestshopMapper extends ChestshopMapper {
     List<Shop> selectShopsByShopTypeWorldItem(@NotNull Set<ShopType> shopTypes,
                                               @Param("world_uuid") @Nullable UUID world,
                                               @Param("item_code") @Nullable String itemCode,
-                                              @Param("visible") @Nullable Boolean visible);
+                                              @Param("visible") @Nullable Boolean visible,
+                                              @Param("fuzzy_search") boolean fuzzySearch);
 
     @Override
     @SelectProvider(value = MariaDatabaseUtil.class, method = "selectShopsPositionsByWorld")

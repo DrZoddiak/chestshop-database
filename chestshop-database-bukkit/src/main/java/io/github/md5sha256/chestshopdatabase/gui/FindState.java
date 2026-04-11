@@ -31,6 +31,7 @@ public class FindState {
             ShopAttribute.class);
     private boolean hideEmptyShops = false;
     private boolean hideFullShops = false;
+    private boolean fuzzySearch = false;
     private final Map<ShopAttribute, Comparator<Shop>> comparators = new EnumMap<>(ShopAttribute.class);
     private final ChestshopItem item;
     private UUID world = null;
@@ -54,6 +55,7 @@ public class FindState {
         }
         this.hideEmptyShops = other.hideEmptyShops;
         this.hideFullShops = other.hideFullShops;
+        this.fuzzySearch = other.fuzzySearch;
         this.comparators.putAll(other.comparators);
     }
 
@@ -122,6 +124,9 @@ public class FindState {
 
     public void setHideEmptyShops(boolean hideEmptyShops) { this.hideEmptyShops = hideEmptyShops; }
     public void setHideFullShops(boolean hideFullShops) {  this.hideFullShops = hideFullShops; }
+
+    public boolean fuzzySearch() { return this.fuzzySearch; }
+    public void setFuzzySearch(boolean fuzzySearch) { this.fuzzySearch = fuzzySearch; }
 
     public void setSortPriority(@NotNull ShopAttribute shopAttribute, int priority) {
         ShopAttributeMeta meta = this.attributeMeta.get(shopAttribute);

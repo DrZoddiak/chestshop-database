@@ -98,7 +98,8 @@ public interface ChestshopMapper {
     List<Shop> selectShopsByShopTypeWorldItem(@NotNull Set<ShopType> shopTypes,
                                               @Nullable UUID world,
                                               @Nullable String itemCode,
-                                              @Nullable Boolean visible);
+                                              @Nullable Boolean visible,
+                                              boolean fuzzySearch);
 
     @NotNull
     List<BlockPosition> selectShopsPositionsByWorld(@Nullable UUID world,

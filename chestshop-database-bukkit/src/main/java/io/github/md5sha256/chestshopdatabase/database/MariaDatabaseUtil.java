@@ -127,7 +127,8 @@ public class MariaDatabaseUtil {
     public String selectShopsByShopTypeWorldItem(@NotNull Set<ShopType> shopTypes,
                                                  @Param("world_uuid") @Nullable UUID world,
                                                  @Param("item_code") @Nullable String itemCode,
-                                                 @Param("visible") @Nullable Boolean visible) {
+                                                 @Param("visible") @Nullable Boolean visible,
+                                                 @Param("fuzzy_search") boolean fuzzySearch) {
         return new SQL()
                 .SELECT("""
                         CAST(world_uuid AS BINARY(16)) AS worldID,
@@ -144,7 +145,8 @@ public class MariaDatabaseUtil {
                         """)
                 .FROM("Shop")
                 .applyIf(visible != null, sql -> sql.WHERE("visible = #{visible}"))
-                .applyIf(itemCode != null, sql -> sql.WHERE("item_code = #{item_code}"))
+                .applyIf(itemCode != null && !fuzzySearch, sql -> sql.WHERE("item_code = #{item_code}"))
+                .applyIf(itemCode != null && fuzzySearch, sql -> sql.WHERE("item_code LIKE CONCAT('%', #{item_code}, '%')"))
                 .applyIf(world != null,
                         sql -> sql.WHERE(
                                 "world_uuid = #{world_uuid, javaType=java.util.UUID, jdbcType=OTHER}"))

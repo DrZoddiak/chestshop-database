@@ -29,7 +29,8 @@ public record FindTaskFactory(@NotNull Supplier<DatabaseSession> sessionSupplier
                                 copy.shopTypes(),
                                 copy.world().orElse(null),
                                 copy.item().itemCode(),
-                                Boolean.TRUE
+                                Boolean.TRUE,
+                                copy.fuzzySearch()
                         );
                     }
                 }, executorState.dbExec())

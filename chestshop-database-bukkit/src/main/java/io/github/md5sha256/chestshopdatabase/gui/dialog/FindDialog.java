@@ -12,6 +12,8 @@ import io.github.md5sha256.chestshopdatabase.util.DialogUtil;
 import io.github.md5sha256.chestshopdatabase.util.SortDirection;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.dialog.Dialog;
+import io.papermc.paper.registry.data.dialog.input.DialogInput;
+import io.papermc.paper.registry.data.dialog.input.SingleOptionDialogInput;
 import io.papermc.paper.dialog.DialogResponseView;
 import io.papermc.paper.registry.data.dialog.ActionButton;
 import io.papermc.paper.registry.data.dialog.DialogBase;
@@ -21,6 +23,7 @@ import io.papermc.paper.registry.data.dialog.type.DialogType;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -33,12 +36,25 @@ import java.util.function.Predicate;
 
 public class FindDialog {
 
+    private static final List<SingleOptionDialogInput.OptionEntry> TOGGLE_OPTIONS = List.of(
+            SingleOptionDialogInput.OptionEntry.create("enabled",
+                    Component.text("On", NamedTextColor.GREEN), true),
+            SingleOptionDialogInput.OptionEntry.create("disabled",
+                    Component.text("Off", NamedTextColor.RED), false));
+
     @NotNull
     private static DialogBase createMainPageBase(@Nullable ChestshopItem item,
                                                  @NotNull MessageContainer messages) {
+        SingleOptionDialogInput fuzzyInput = DialogInput.singleOption(
+                "fuzzy_search",
+                Component.text("Include Similar Items"),
+                TOGGLE_OPTIONS).build();
+
         if (item == null) {
             return DialogBase.builder(messages.messageFor("find.dialog.title"))
-                    .canCloseWithEscape(true).build();
+                    .canCloseWithEscape(true)
+                    .inputs(List.of(fuzzyInput))
+                    .build();
         }
         ItemStack itemStack = item.itemStack();
         Component name = itemStack.getDataOrDefault(DataComponentTypes.CUSTOM_NAME,
@@ -51,7 +67,9 @@ public class FindDialog {
 
         var nameBody = DialogBody.plainMessage(name);
         var itemBody = DialogBody.item(item.itemStack()).build();
-        return builder.body(List.of(itemBody, nameBody)).build();
+        return builder.body(List.of(itemBody, nameBody))
+                .inputs(List.of(fuzzyInput))
+                .build();
     }
 
     private static Dialog waitScreen(@NotNull MessageContainer messages) {
@@ -80,8 +98,11 @@ public class FindDialog {
             @NotNull Predicate<Player> isBedrockPlayer,
             @NotNull MessageContainer messages) {
         if (!(audience instanceof Player player)) {
-            audience.showDialog(waitScreen(messages));
             return;
+        }
+        String fuzzySearch = view.getText("fuzzy_search");
+        if (fuzzySearch != null) {
+            findState.setFuzzySearch(fuzzySearch.equals("enabled"));
         }
         if (isBedrockPlayer.test(player)) {
             player.sendMessage(messages.messageFor("find.querying"));
