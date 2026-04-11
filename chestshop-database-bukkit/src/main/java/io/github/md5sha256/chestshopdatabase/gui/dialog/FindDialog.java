@@ -110,8 +110,6 @@ public class FindDialog {
             audience.showDialog(waitScreen(messages));
         }
         taskFactory.findTask(findState).whenComplete((res, ex) -> {
-            // Show empty dialog so bedrock users have the dialog closed
-            audience.showDialog(DialogUtil.EMPTY_DIALOG);
             // close all dialogs for java users
             audience.closeDialog();
             if (ex != null) {
