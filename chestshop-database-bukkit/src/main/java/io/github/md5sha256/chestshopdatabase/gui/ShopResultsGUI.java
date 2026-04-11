@@ -33,11 +33,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 public record ShopResultsGUI(@NotNull Plugin plugin,
@@ -138,7 +138,12 @@ public record ShopResultsGUI(@NotNull Plugin plugin,
                                     shop.itemCode(), itemStack, resultsGui);
                             previewGui.show(player);
                         }, task -> plugin.getServer().getScheduler()
-                                .runTaskLater(plugin, task, 1));
+                                .runTaskLater(plugin, task, 1))
+                        .exceptionally(ex -> {
+                            plugin.getLogger().warning(
+                                    "Failed to lookup item stack for " + shop.itemCode() + ": " + ex.getMessage());
+                            return null;
+                        });
                 return;
             }
             if (clickCommand != null && !clickCommand.isEmpty()) {
@@ -217,7 +222,7 @@ public record ShopResultsGUI(@NotNull Plugin plugin,
                               @Nullable String queriedItemCode,
                               @Nullable Gui parent) {
         ChestGui gui = new ChestGui(6, ComponentHolder.of(title), this.plugin);
-        Map<String, ItemStack> itemCache = new HashMap<>();
+        Map<String, ItemStack> itemCache = new ConcurrentHashMap<>();
         if (queriedItemCode != null) {
             itemCache.put(queriedItemCode, shopItem);
         }

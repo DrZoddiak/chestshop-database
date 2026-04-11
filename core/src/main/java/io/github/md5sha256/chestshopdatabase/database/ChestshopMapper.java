@@ -37,7 +37,16 @@ public interface ChestshopMapper {
     @NotNull
     List<String> selectItemCodes();
 
-    byte @Nullable [] selectItemBytes(@NotNull String itemCode);
+    @Nullable
+    Map<String, Object> selectItemBytesRaw(@NotNull String itemCode);
+
+    default byte @Nullable [] selectItemBytes(@NotNull String itemCode) {
+        Map<String, Object> row = selectItemBytesRaw(itemCode);
+        if (row == null) {
+            return null;
+        }
+        return (byte[]) row.get("item_bytes");
+    }
 
 
     void insertShop(

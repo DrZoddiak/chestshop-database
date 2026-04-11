@@ -12,10 +12,13 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.Update;
+
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -47,7 +50,8 @@ public interface MariaChestshopMapper extends ChestshopMapper {
 
     @Override
     @Select("SELECT item_bytes FROM Item WHERE item_code = #{item_code}")
-    byte @Nullable [] selectItemBytes(@NotNull @Param("item_code") String itemCode);
+    @Nullable
+    Map<String, Object> selectItemBytesRaw(@NotNull @Param("item_code") String itemCode);
 
     @Override
     @Insert("""
