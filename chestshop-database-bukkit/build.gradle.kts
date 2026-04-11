@@ -4,7 +4,7 @@ plugins {
     id("com.gradleup.shadow") version "9.2.2"
 }
 
-version = "1.1"
+version = "1.2-SNAPSHOT"
 
 repositories {
     maven {
