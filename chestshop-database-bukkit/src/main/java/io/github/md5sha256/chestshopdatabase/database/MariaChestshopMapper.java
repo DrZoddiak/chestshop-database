@@ -46,6 +46,10 @@ public interface MariaChestshopMapper extends ChestshopMapper {
     List<String> selectItemCodes();
 
     @Override
+    @Select("SELECT item_bytes FROM Item WHERE item_code = #{item_code}")
+    byte @Nullable [] selectItemBytes(@NotNull @Param("item_code") String itemCode);
+
+    @Override
     @Insert("""
             INSERT INTO Shop (world_uuid,
                               pos_x,

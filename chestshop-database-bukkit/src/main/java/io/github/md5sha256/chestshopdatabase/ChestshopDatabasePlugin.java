@@ -98,12 +98,13 @@ public final class ChestshopDatabasePlugin extends JavaPlugin {
         discoverer = new ItemDiscoverer(50, Duration.ofMinutes(5), 50, getServer(), getLogger());
         BukkitScheduler scheduler = getServer().getScheduler();
         executorState = new ExecutorState(databaseExecutor, scheduler.getMainThreadExecutor(this));
-        gui = new ShopResultsGUI(this, this.replacements, () -> this.settings, () -> this.messageContainer);
         SqlSessionFactory sessionFactory = MariaDatabase.buildSessionFactory(this.databaseSettings);
         Supplier<DatabaseSession> sessionSupplier =
                 () -> new DatabaseSession(sessionFactory,
                         MariaChestshopMapper.class,
                         MariaPreferenceMapper.class);
+        gui = new ShopResultsGUI(this, this.replacements, () -> this.settings, () -> this.messageContainer,
+                sessionSupplier, executorState);
         previewHandler = new PreviewHandler(this,
                 sessionSupplier,
                 this.executorState,

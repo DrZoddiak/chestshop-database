@@ -37,6 +37,8 @@ public interface ChestshopMapper {
     @NotNull
     List<String> selectItemCodes();
 
+    byte @Nullable [] selectItemBytes(@NotNull String itemCode);
+
 
     void insertShop(
             @NotNull UUID worldUUID,

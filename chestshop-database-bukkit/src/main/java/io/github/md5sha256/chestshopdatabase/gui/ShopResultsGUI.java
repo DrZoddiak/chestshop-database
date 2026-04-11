@@ -10,17 +10,21 @@ import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 import com.github.stefvanschie.inventoryframework.pane.component.PagingButtons;
 import com.github.stefvanschie.inventoryframework.pane.util.Slot;
 import io.github.md5sha256.chestshopdatabase.ReplacementRegistry;
+import io.github.md5sha256.chestshopdatabase.database.DatabaseSession;
+import io.github.md5sha256.chestshopdatabase.ExecutorState;
 import io.github.md5sha256.chestshopdatabase.model.Shop;
 import io.github.md5sha256.chestshopdatabase.model.ShopType;
 import io.github.md5sha256.chestshopdatabase.settings.MessageContainer;
 import io.github.md5sha256.chestshopdatabase.settings.Settings;
 import io.github.md5sha256.chestshopdatabase.util.BlockPosition;
 import io.github.md5sha256.chestshopdatabase.util.SimpleItemStack;
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -29,14 +33,19 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 public record ShopResultsGUI(@NotNull Plugin plugin,
                              @NotNull ReplacementRegistry replacements,
                              @NotNull Supplier<Settings> settings,
-                             @NotNull Supplier<MessageContainer> messages) {
+                             @NotNull Supplier<MessageContainer> messages,
+                             @NotNull Supplier<DatabaseSession> sessionSupplier,
+                             @NotNull ExecutorState executorState) {
 
 
     private static String distanceString(Shop shop, @Nullable BlockPosition queryPosition) {
@@ -62,10 +71,12 @@ public record ShopResultsGUI(@NotNull Plugin plugin,
 
 
     private ItemStack shopToIcon(@NotNull Shop shop,
-                                 @Nullable BlockPosition queryPosition) {
+                                 @Nullable BlockPosition queryPosition,
+                                 @Nullable String queriedItemCode) {
         ReplacementRegistry forked = this.replacements.fork()
                 .stringReplacement("%distance%", s -> distanceString(s, queryPosition));
         ItemStack itemStack = template(shop.shopType());
+        boolean isSimilar = queriedItemCode != null && !shop.itemCode().equals(queriedItemCode);
         itemStack.editMeta(meta -> {
                     Component displayName = stripItalics(forked.applyReplacements(shop,
                             itemStack.effectiveName()));
@@ -78,6 +89,9 @@ public record ShopResultsGUI(@NotNull Plugin plugin,
                     meta.lore(lore);
                 }
         );
+        if (isSimilar) {
+            itemStack.setData(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
+        }
         return itemStack;
     }
 
@@ -88,8 +102,9 @@ public record ShopResultsGUI(@NotNull Plugin plugin,
     public ChestGui createGui(@NotNull Component title,
                               @NotNull List<Shop> shops,
                               @NotNull ItemStack shopItem,
-                              @Nullable BlockPosition queryPosition) {
-        return createGui(title, shops, shopItem, queryPosition, null);
+                              @Nullable BlockPosition queryPosition,
+                              @Nullable String queriedItemCode) {
+        return createGui(title, shops, shopItem, queryPosition, queriedItemCode, null);
     }
 
     @NotNull
@@ -101,33 +116,114 @@ public record ShopResultsGUI(@NotNull Plugin plugin,
     }
 
     private GuiItem shopToGuiItem(@NotNull Shop shop,
-                                  @Nullable BlockPosition queryPosition) {
+                                  @Nullable BlockPosition queryPosition,
+                                  @Nullable String queriedItemCode,
+                                  @NotNull Map<String, ItemStack> itemCache,
+                                  @NotNull Gui resultsGui) {
         String clickCommand = settings().get().clickCommand();
-        if (clickCommand == null || clickCommand.isEmpty()) {
-            return new GuiItem(shopToIcon(shop, queryPosition), this.plugin);
-        }
+        ItemStack icon = shopToIcon(shop, queryPosition, queriedItemCode);
 
-        String injected = injectPlaceholders(clickCommand, shop);
-
-        return new GuiItem(shopToIcon(shop, queryPosition), (event) -> {
+        return new GuiItem(icon, (event) -> {
             event.setCancelled(true);
-            event.getView().close();
-            HumanEntity clicked = event.getWhoClicked();
-            if (clicked instanceof Player player) {
-                player.performCommand(injected);
+            if (event.getClick() == ClickType.RIGHT || event.getClick() == ClickType.SHIFT_RIGHT) {
+                if (!(event.getWhoClicked() instanceof Player player)) {
+                    return;
+                }
+                lookupItemStack(shop.itemCode(), itemCache)
+                        .thenAcceptAsync(itemStack -> {
+                            if (itemStack == null) {
+                                return;
+                            }
+                            ChestGui previewGui = createItemPreviewGui(
+                                    shop.itemCode(), itemStack, resultsGui);
+                            previewGui.show(player);
+                        }, task -> plugin.getServer().getScheduler()
+                                .runTaskLater(plugin, task, 1));
+                return;
+            }
+            if (clickCommand != null && !clickCommand.isEmpty()) {
+                String injected = injectPlaceholders(clickCommand, shop);
+                event.getView().close();
+                HumanEntity clicked = event.getWhoClicked();
+                if (clicked instanceof Player player) {
+                    player.performCommand(injected);
+                }
             }
         }, this.plugin);
+    }
+
+    @NotNull
+    private ChestGui createItemPreviewGui(@NotNull String itemCode,
+                                          @NotNull ItemStack itemStack,
+                                          @NotNull Gui parent) {
+        Component title = Component.text("Item Preview: " + itemCode);
+        ChestGui gui = new ChestGui(3, ComponentHolder.of(title), this.plugin);
+
+        StaticPane pane = new StaticPane(0, 0, 9, 3);
+        pane.addItem(new GuiItem(itemStack, event -> event.setCancelled(true), this.plugin), 4, 1);
+
+        ItemStack backItem = ItemStack.of(Material.ARROW);
+        backItem.editMeta(meta -> {
+            Component displayName = messages.get().messageFor("gui.results.back")
+                    .decoration(TextDecoration.ITALIC, false);
+            meta.displayName(displayName);
+        });
+        GuiItem backButton = new GuiItem(backItem, event -> {
+            event.getView().close();
+            plugin.getServer().getScheduler().runTaskLater(plugin,
+                    () -> parent.show(event.getWhoClicked()), 1);
+        }, this.plugin);
+        pane.addItem(backButton, 0, 2);
+
+        ItemStack fillItem = ItemStack.of(Material.GRAY_STAINED_GLASS_PANE);
+        fillItem.editMeta(meta -> meta.displayName(Component.empty()));
+        pane.fillWith(fillItem, null, this.plugin);
+
+        gui.addPane(pane);
+        gui.setOnGlobalClick(event -> event.setCancelled(true));
+        gui.setOnClose(event -> {
+            if (event.getReason() == InventoryCloseEvent.Reason.OPEN_NEW) {
+                return;
+            }
+            plugin.getServer().getScheduler().runTaskLater(plugin,
+                    () -> parent.show(event.getPlayer()), 1);
+        });
+        return gui;
+    }
+
+    private CompletableFuture<@Nullable ItemStack> lookupItemStack(@NotNull String itemCode,
+                                                                    @NotNull Map<String, ItemStack> cache) {
+        ItemStack cached = cache.get(itemCode);
+        if (cached != null) {
+            return CompletableFuture.completedFuture(cached);
+        }
+        return CompletableFuture.supplyAsync(() -> {
+            try (DatabaseSession session = sessionSupplier.get()) {
+                byte[] bytes = session.chestshopMapper().selectItemBytes(itemCode);
+                if (bytes == null) {
+                    return null;
+                }
+                ItemStack item = ItemStack.deserializeBytes(bytes);
+                cache.put(itemCode, item);
+                return item;
+            }
+        }, executorState.dbExec());
     }
 
     public ChestGui createGui(@NotNull Component title,
                               @NotNull List<Shop> shops,
                               @NotNull ItemStack shopItem,
                               @Nullable BlockPosition queryPosition,
+                              @Nullable String queriedItemCode,
                               @Nullable Gui parent) {
         ChestGui gui = new ChestGui(6, ComponentHolder.of(title), this.plugin);
+        Map<String, ItemStack> itemCache = new HashMap<>();
+        if (queriedItemCode != null) {
+            itemCache.put(queriedItemCode, shopItem);
+        }
         List<GuiItem> items = new ArrayList<>();
         for (Shop shop : shops) {
-            GuiItem item = shopToGuiItem(shop, queryPosition);
+            GuiItem item = shopToGuiItem(shop, queryPosition, queriedItemCode, itemCache, gui);
             items.add(item);
         }
         PaginatedPane mainPane = new PaginatedPane(9, 5);
