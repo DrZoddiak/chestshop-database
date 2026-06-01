@@ -184,17 +184,20 @@ public final class ChestshopDatabasePlugin extends JavaPlugin {
         );
     }
 
+    /**
+     * Evaluated on each find submit, not at plugin enable. Other plugins (e.g. Floodgate) may
+     * still be starting when {@link #onEnable()} runs; a one-time check would permanently treat
+     * everyone as Java and show the query dialog instead of the Bedrock chat message.
+     */
     private @NotNull Predicate<Player> bedrockPlayerPredicate(@NotNull PluginManager pluginManager) {
-        Predicate<Player> predicate = player -> false;
-        if (pluginManager.isPluginEnabled("floodgate")) {
-            predicate = predicate.or(
-                    player -> FloodgateBedrockDetector.isBedrockPlayer(player.getUniqueId()));
-        }
-        if (pluginManager.isPluginEnabled("Geyser-Spigot")) {
-            predicate = predicate.or(
-                    player -> GeyserBedrockDetector.isBedrockPlayer(player.getUniqueId()));
-        }
-        return predicate;
+        return player -> {
+            if (pluginManager.isPluginEnabled("floodgate")
+                    && FloodgateBedrockDetector.isBedrockPlayer(player.getUniqueId())) {
+                return true;
+            }
+            return pluginManager.isPluginEnabled("Geyser-Spigot")
+                    && GeyserBedrockDetector.isBedrockPlayer(player.getUniqueId());
+        };
     }
 
     private void registerAdapters() {
