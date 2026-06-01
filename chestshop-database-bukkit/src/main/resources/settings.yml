@@ -28,6 +28,7 @@ shop-template-both:
     - '<white>Remaining Capacity:</white> <light_purple>%capacity%'
     - '<white>Distance:</white> <yellow>%distance%</yellow>'
     - '<white>Location:</white> <gold>%x%, %y%, %z%</gold> <dark_grey>(%world%)'
-shop-icon-click-command: 'compass start <x> <y> <z>'
+shop-icon-left-click-command: 'directions start at <x> <y> <z>'
+shop-icon-right-click-command: 'compass start <x> <y> <z>'
 shop-preview-default-visibility: true
 shop-preview-scale: 0.5

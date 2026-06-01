@@ -251,6 +251,7 @@ public final class ChestshopDatabasePlugin extends JavaPlugin {
                 SimpleItemStack.fromItemStack(DummyData.shopToIcon(ShopType.SELL)),
                 SimpleItemStack.fromItemStack(DummyData.shopToIcon(ShopType.BOTH)),
                 "/commandName <x> <y> <z>",
+                "/commandName <x> <y> <z>",
                 true,
                 0.5f
         );

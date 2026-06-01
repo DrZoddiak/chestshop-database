@@ -11,7 +11,8 @@ public record Settings(
         @Setting("shop-template-buy") @Required SimpleItemStack buyShopTemplate,
         @Setting("shop-template-sell") @Required SimpleItemStack sellShopTemplate,
         @Setting("shop-template-both") @Required SimpleItemStack bothShopTemplate,
-        @Setting("shop-icon-click-command") @Nullable String clickCommand,
+        @Setting("shop-icon-left-click-command") @Nullable String leftClickCommand,
+        @Setting("shop-icon-right-click-command") @Nullable String rightClickCommand,
         @Setting("shop-preview-default-visibility") boolean previewDefaultVisibility,
         @Setting("shop-preview-scale") float shopPreviewScale
 ) {
