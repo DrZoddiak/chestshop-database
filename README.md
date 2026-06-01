@@ -47,7 +47,7 @@ Built for [DemocracyCraft](https://www.democracycraft.net/) and [StateCraft](htt
 | File | Purpose |
 |---|---|
 | `database-settings.yml` | MariaDB URL, username, password |
-| `settings.yml` | Shop icon templates, lore, click command, preview scale |
+| `settings.yml` | Shop icon templates, lore, left/right click commands, preview scale |
 | `item-code-groupings.yml` | Item code aliases mapped to canonical item codes |
 | `messages.yml` | Player-facing messages (MiniMessage) |
 

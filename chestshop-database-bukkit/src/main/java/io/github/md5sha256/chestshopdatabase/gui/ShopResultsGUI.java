@@ -22,7 +22,6 @@ import io.papermc.paper.datacomponent.DataComponentTypes;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
-import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -107,6 +106,11 @@ public record ShopResultsGUI(@NotNull Plugin plugin,
         return createGui(title, shops, shopItem, queryPosition, queriedItemCode, null);
     }
 
+    private void runClickCommand(@NotNull Player player, @NotNull String command, @NotNull Shop shop) {
+        player.performCommand(injectPlaceholders(command, shop));
+        player.closeInventory();
+    }
+
     @NotNull
     private String injectPlaceholders(@NotNull String s, @NotNull Shop shop) {
         BlockPosition pos = shop.blockPosition();
@@ -120,13 +124,20 @@ public record ShopResultsGUI(@NotNull Plugin plugin,
                                   @Nullable String queriedItemCode,
                                   @NotNull Map<String, ItemStack> itemCache,
                                   @NotNull Gui resultsGui) {
-        String clickCommand = settings().get().clickCommand();
+        Settings settings = settings().get();
+        String leftClickCommand = settings.leftClickCommand();
+        String rightClickCommand = settings.rightClickCommand();
         ItemStack icon = shopToIcon(shop, queryPosition, queriedItemCode);
 
         return new GuiItem(icon, (event) -> {
             event.setCancelled(true);
-            if (event.getClick() == ClickType.RIGHT || event.getClick() == ClickType.SHIFT_RIGHT) {
-                if (!(event.getWhoClicked() instanceof Player player)) {
+            if (!(event.getWhoClicked() instanceof Player player)) {
+                return;
+            }
+            ClickType click = event.getClick();
+            if (click == ClickType.RIGHT || click == ClickType.SHIFT_RIGHT) {
+                if (rightClickCommand != null && !rightClickCommand.isEmpty()) {
+                    runClickCommand(player, rightClickCommand, shop);
                     return;
                 }
                 lookupItemStack(shop.itemCode(), itemCache)
@@ -146,13 +157,8 @@ public record ShopResultsGUI(@NotNull Plugin plugin,
                         });
                 return;
             }
-            if (clickCommand != null && !clickCommand.isEmpty()) {
-                String injected = injectPlaceholders(clickCommand, shop);
-                event.getView().close();
-                HumanEntity clicked = event.getWhoClicked();
-                if (clicked instanceof Player player) {
-                    player.performCommand(injected);
-                }
+            if (leftClickCommand != null && !leftClickCommand.isEmpty()) {
+                runClickCommand(player, leftClickCommand, shop);
             }
         }, this.plugin);
     }
