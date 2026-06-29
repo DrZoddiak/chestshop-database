@@ -11,7 +11,7 @@ import java.text.NumberFormat;
 
 public class ShopReplacements {
 
-    private static final NumberFormat PRICE_FORMAT = new DecimalFormat("$#.##");
+    private static final NumberFormat PRICE_FORMAT = new DecimalFormat("£#.##");
 
     private ShopReplacements() {
     }
